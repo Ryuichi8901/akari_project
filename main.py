@@ -14,10 +14,27 @@ from depthai_handface.HandFaceRenderer import HandFaceRenderer
 akari = AkariClient()
 m5 = akari.m5stack  # M5Stackのインスタンスを取得
 
+# ジェスチャーに対応する絵文字を取得する関数
+def get_gesture_emoji(gesture_result) -> str:
+    # ジェスチャーの結果に応じた絵文字を返す
+    emoji_dict = {
+        "OK": "👌",         # OKジェスチャー
+        "FIVE": "🖐️",      # 手のひらを広げた状態
+        "PEACE": "✌️",     # ピースサイン
+        "THUMB_UP": "👍",   # 親指を立てる（いいね）
+        "ONE": "☝️",       # 1本指
+        "TWO": "✌️",       # 2本指（ピースサインと同じ）
+        "THREE": "🤟",      # 3本指
+        "FOUR": "✋",       # 4本指
+        "FIST": "✊",       # 握り拳
+    }
+    return emoji_dict.get(gesture_result, "🤷")  # 該当がない場合は肩をすくめる絵文字
+
 # 手のジェスチャー結果をM5Stackに表示する関数
 def display_gesture_result(gesture_result) -> None:
+    emoji = get_gesture_emoji(gesture_result)  # ジェスチャーに対応する絵文字を取得
     m5.set_display_text(
-        text=gesture_result,
+        text=emoji,  # 絵文字を表示
         pos_x=Positions.CENTER,
         pos_y=Positions.CENTER,
         size=12,
@@ -54,7 +71,7 @@ def main() -> None:
             gesture_result = hand.gesture  # ジェスチャーの結果を取得
             if gesture_result:
                 print(f"Hand Gesture Detected: {gesture_result}")
-                display_gesture_result(gesture_result)  # M5Stackに表示
+                display_gesture_result(gesture_result)  # M5Stackに絵文字を表示
 
         # 描画とキー入力の処理
         key = renderer.waitKey(delay=1)
