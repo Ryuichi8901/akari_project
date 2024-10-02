@@ -118,7 +118,6 @@ def main() -> None:
     try:
         log = json.load(json_open)
     except json.JSONDecodeError:
-<<<<<<< HEAD
         log = {"gesture_counts": {"rock": 0, "peace": 0, "scissors": 0}}
     gesture_counts = log["gesture_counts"]
 
@@ -129,33 +128,14 @@ def main() -> None:
     hand_gesture_counts = {"rock": 0, "peace": 0, "scissors": 0}  # 各ジェスチャーのカウント
     display_gesture_count(gesture_counts)
 
-=======
-        log = {"good_count": 0}
-    total_good_count = 0
-    if log["good_count"] is not None:
-        total_good_count = log["good_count"]
-
-    renderer = HandFaceRenderer(tracker=tracker, output=None)
-    HAND_GOOD_THRESHOLD = 5  # この回数以上OKが検出されたら1いいねとカウント
-    HAND_ERROR_THRESHOLD = (
-        3  # HAND_GOOD_THRESHOLDこの回数以上OK以外が検出されたらリセット
-    )
-    GOOD_LOCK_TIME = 2  # いいね後のロック時間
-    last_count_time = time.time()
-    hand_good_count = [0, 0]  # OKのカウント回数[左手、右手]
-    hand_good_error_count = [0, 0]  # OKが抜けた回数[左手、右手]
-    display_good_count(total_good_count)
->>>>>>> 42fea85ad69dd802112d0b74f7a98b56d791ddf3
     while True:
         frame, faces, hands = tracker.next_frame()
         if frame is None:
             break
+        
         # Draw face and hands
         frame = renderer.draw(frame, faces, hands)
-<<<<<<< HEAD
 
-=======
->>>>>>> 42fea85ad69dd802112d0b74f7a98b56d791ddf3
         for hand in hands:
             hand_num = 0
             if hand.label == "left":
@@ -164,9 +144,9 @@ def main() -> None:
                 hand_num = 1
             else:
                 continue
+            
             gesture_result = hand.gesture
             if (
-<<<<<<< HEAD
                 gesture_result in hand_gesture_counts.keys() and
                 time.time() - last_count_time > GOOD_LOCK_TIME
             ):
@@ -178,27 +158,6 @@ def main() -> None:
                     target=good_update, args=(hand_gesture_counts,)
                 )
                 good_thread.start()
-=======
-                gesture_result == "OK"
-                and time.time() - last_count_time > GOOD_LOCK_TIME
-            ):
-                hand_good_count[hand_num] += 1
-            else:
-                hand_good_error_count[hand_num] += 1
-            # OKの検出回数が一定回数になったらいいねを加算
-            if hand_good_count[hand_num] > HAND_GOOD_THRESHOLD:
-                last_count_time = time.time()
-                total_good_count += 1
-                hand_good_count[hand_num] = 0
-                hand_good_error_count[hand_num] = 0
-                good_thread = threading.Thread(
-                    target=good_update, args=(total_good_count,)
-                )
-                good_thread.start()
-            elif hand_good_error_count[hand_num] > HAND_ERROR_THRESHOLD:
-                hand_good_count[hand_num] = 0
-                hand_good_error_count[hand_num] = 0
->>>>>>> 42fea85ad69dd802112d0b74f7a98b56d791ddf3
 
         key = renderer.waitKey(delay=1)
         if key == 27 or key == ord("q"):
@@ -209,9 +168,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-<<<<<<< HEAD
     main()
-
 
 # #!/usr/bin/env python3
 
