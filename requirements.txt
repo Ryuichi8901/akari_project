@@ -1,0 +1,4 @@
+akari-client[depthai]
+akari-proto
+depthai
+shapely
