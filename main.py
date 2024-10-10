@@ -1,27 +1,20 @@
 #!/usr/bin/env python3
 
 import grpc
-import json
 import threading
 import sys
 import os
 import time
-# ランダムにじゃんけんの手を決める
-import random  
-from typing import Any
+import random
 from akari_client import AkariClient
 from akari_client.color import Colors
 from akari_client.position import Positions
-
-# 手を常に認識するために使用する
 from depthai_handface.HandFaceTracker import HandFaceTracker
 from depthai_handface.HandFaceRenderer import HandFaceRenderer
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "akari_motion_server/lib/grpc"))
 import motion_server_pb2
 import motion_server_pb2_grpc
-
-json_path = "log/log.json"
 
 # Akariロボットのモーションサーバーの設定
 motion_server_port = "localhost:50055"
@@ -32,7 +25,7 @@ m5 = akari.m5stack
 
 # 特定のポーズを認識するため（goodであるかどうか）
 def janken_pose(gesture_result):
-    return gesture_result == "OK" 
+    return gesture_result == "OK"
 
 # じゃんけんの結果を表示する
 def display_result(result):
@@ -46,10 +39,11 @@ def display_result(result):
         refresh=True,
     )
 
+# カウントダウンを別スレッドで実行
 def display_count(akari_hand):
-    for i in (3, 0, -1):
+    for i in range(3, 0, -1):
         m5.set_display_text(
-            text = f"じゃんけんスタートまで{i}秒",
+            text=f"じゃんけんスタートまで{i}秒",
             pos_x=Positions.CENTER,
             pos_y=Positions.CENTER,
             size=12,
@@ -57,7 +51,7 @@ def display_count(akari_hand):
             back_color=Colors.WHITE,
             refresh=True,
         )
-        time.sleep(1)  
+        time.sleep(1)
 
     m5.set_display_text(
         text="最初はグー",
@@ -68,7 +62,7 @@ def display_count(akari_hand):
         back_color=Colors.WHITE,
         refresh=True,
     )
-    time.sleep(2) 
+    time.sleep(1)
 
     m5.set_display_text(
         text="じゃんけん",
@@ -79,10 +73,10 @@ def display_count(akari_hand):
         back_color=Colors.WHITE,
         refresh=True,
     )
-    time.sleep(1)  
+    time.sleep(1)
 
     m5.set_display_text(
-        text=f"ぽん {akari_hand} ",
+        text=f"ぽん {akari_hand}",
         pos_x=Positions.CENTER,
         pos_y=Positions.CENTER,
         size=12,
@@ -90,28 +84,6 @@ def display_count(akari_hand):
         back_color=Colors.WHITE,
         refresh=True,
     )
-
-# あいこの場合
-# def display_aiko(akari_hand):
-#     m5.set_display_text(
-#         text=f"あいこで",
-#         pos_x=Positions.CENTER,
-#         pos_y=Positions.CENTER,
-#         size=12,
-#         text_color=Colors.RED,
-#         back_color=Colors.WHITE,
-#         refresh=True,
-#     )
-
-#     m5.set_display_text(
-#         text={akari_hand},
-#         pos_x=Positions.CENTER,
-#         pos_y=Positions.CENTER,
-#         size=12,
-#         text_color=Colors.RED,
-#         back_color=Colors.WHITE,
-#         refresh=True,
-#     )
 
 def recognize_gesture(gesture_result):
     if gesture_result == "FIST":  # グー
@@ -122,9 +94,8 @@ def recognize_gesture(gesture_result):
         return "パー"
     return None
 
-# 勝ちか負けかを判断する
 def judge(player_hand, akari_hand):
-    if player_hand ==akari_hand:
+    if player_hand == akari_hand:
         return "引き分け"
     elif (player_hand == "グー" and akari_hand == "チョキ") or \
          (player_hand == "チョキ" and akari_hand == "パー") or \
@@ -132,6 +103,18 @@ def judge(player_hand, akari_hand):
         return "勝ち"
     else:
         return "負け"
+
+# じゃんけんの処理を別スレッドで実行
+def start_janken(gesture_result):
+    akari_hand = random.choice(["グー", "チョキ", "パー"])
+    display_count_thread = threading.Thread(target=display_count, args=(akari_hand,))
+    display_count_thread.start()
+
+    player_hand = recognize_gesture(gesture_result)
+    if player_hand:
+        result = judge(player_hand, akari_hand)
+        display_result(f"あなたの手: {player_hand}, Akariの手: {akari_hand}, 結果: {result}")
+        display_count_thread.join()
 
 # メイン関数
 def main() -> None:
@@ -142,42 +125,25 @@ def main() -> None:
         input_src=None, 
         with_attention=False,
         trace=0,
-        # いちよ手の位置計算（視認用）
         xyz=True,
-        # 手のジェスチャーを有効にする
         use_gesture=True, 
-        # 片手のみ認識
         nb_hands=1
-        )
+    )
     
-    # 描画準備
     renderer = HandFaceRenderer(tracker=tracker, output=None)
 
     while True:
-        # 次のフレームの情報を入手
         frame, faces, hands = tracker.next_frame()
         if frame is None:
             break
 
-        # フレームを描画
         frame = renderer.draw(frame, faces, hands)
 
-        
         for hand in hands:
-            # じゃんけんの手を取得する
             gesture_result = hand.gesture
-            # goodにした時に開始
             if janken_pose(gesture_result):
-                akari_hand = random.choice(["グー", "チョキ", "パー"])
-                display_count(akari_hand)
-                player_hand = recognize_gesture(gesture_result)
-                if player_hand:
-                    # akariの手を決める
-                    # akari_hand = random.choice(["グー", "チョキ", "パー"])
-                    # じゃんけん判定
-                    result = judge(player_hand,akari_hand)
-                    display_result(f"あなたの手: {player_hand}\n, Akariの手: {akari_hand}\n, 結果: {result}")
-                    time.sleep(10)
+                janken_thread = threading.Thread(target=start_janken, args=(gesture_result,))
+                janken_thread.start()
         
         if renderer.waitKey(delay=1) == ord('q'):
             break
