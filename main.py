@@ -44,11 +44,11 @@ def display_result(result):
 
 # 
 def recognize_gesture(gesture_result):
-    if gesture_result == "rock":  # グー
+    if gesture_result == "FIST":  # グー
         return "グー"
-    elif gesture_result == "scissors":  # チョキ
+    elif gesture_result == "PEACE":  # チョキ
         return "チョキ"
-    elif gesture_result == "paper":  # パー
+    elif gesture_result == "FIVE":  # パー
         return "パー"
     return None
 
