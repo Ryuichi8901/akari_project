@@ -33,20 +33,20 @@ def display_result(result):
         text=result,
         pos_x=Positions.CENTER,
         pos_y=Positions.CENTER,
-        size=12,
+        size=2,
         text_color=Colors.RED,
         back_color=Colors.WHITE,
         refresh=True,
     )
 
-# カウントダウンを別スレッドで実行
+# カウントダウンを表示
 def display_count(akari_hand):
     for i in range(3, 0, -1):
         m5.set_display_text(
             text=f"じゃんけんスタートまで{i}秒",
             pos_x=Positions.CENTER,
             pos_y=Positions.CENTER,
-            size=12,
+            size=2,
             text_color=Colors.RED,
             back_color=Colors.WHITE,
             refresh=True,
@@ -57,7 +57,7 @@ def display_count(akari_hand):
         text="最初はグー",
         pos_x=Positions.CENTER,
         pos_y=Positions.CENTER,
-        size=12,
+        size=2,
         text_color=Colors.RED,
         back_color=Colors.WHITE,
         refresh=True,
@@ -68,7 +68,7 @@ def display_count(akari_hand):
         text="じゃんけん",
         pos_x=Positions.CENTER,
         pos_y=Positions.CENTER,
-        size=12,
+        size=2,
         text_color=Colors.RED,
         back_color=Colors.WHITE,
         refresh=True,
@@ -79,7 +79,7 @@ def display_count(akari_hand):
         text=f"ぽん {akari_hand}",
         pos_x=Positions.CENTER,
         pos_y=Positions.CENTER,
-        size=12,
+        size=2,
         text_color=Colors.RED,
         back_color=Colors.WHITE,
         refresh=True,
@@ -104,25 +104,22 @@ def judge(player_hand, akari_hand):
     else:
         return "負け"
 
-# じゃんけんの処理を別スレッドで実行
+# じゃんけんの処理をスレッドで実行
 def start_janken(gesture_result):
     akari_hand = random.choice(["グー", "チョキ", "パー"])
-    display_count_thread = threading.Thread(target=display_count, args=(akari_hand,))
-    display_count_thread.start()
+    display_count(akari_hand)
 
     player_hand = recognize_gesture(gesture_result)
     if player_hand:
         result = judge(player_hand, akari_hand)
         display_result(f"あなたの手: {player_hand}, Akariの手: {akari_hand}, 結果: {result}")
-        display_count_thread.join()
 
 # メイン関数
 def main() -> None:
     tracker = HandFaceTracker(
         input_src=None,
         double_face=False,
-        use_face_pose=False,
-        input_src=None, 
+        use_face_pose=False, 
         with_attention=False,
         trace=0,
         xyz=True,
@@ -131,6 +128,8 @@ def main() -> None:
     )
     
     renderer = HandFaceRenderer(tracker=tracker, output=None)
+
+    janken_in_progress = False
 
     while True:
         frame, faces, hands = tracker.next_frame()
@@ -141,9 +140,12 @@ def main() -> None:
 
         for hand in hands:
             gesture_result = hand.gesture
-            if janken_pose(gesture_result):
+            if janken_pose(gesture_result) and not janken_in_progress:
+                janken_in_progress = True
                 janken_thread = threading.Thread(target=start_janken, args=(gesture_result,))
                 janken_thread.start()
+                janken_thread.join()  # じゃんけんが完了するまで次の処理を待つ
+                janken_in_progress = False
         
         if renderer.waitKey(delay=1) == ord('q'):
             break
