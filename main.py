@@ -104,16 +104,6 @@ def judge(player_hand, akari_hand):
     else:
         return "負け"
 
-# じゃんけんの処理をスレッドで実行
-def start_janken(gesture_result):
-    akari_hand = random.choice(["グー", "チョキ", "パー"])
-    display_count(akari_hand)
-
-    player_hand = recognize_gesture(gesture_result)
-    if player_hand:
-        result = judge(player_hand, akari_hand)
-        display_result(f"あなたの手: {player_hand}, Akariの手: {akari_hand}, 結果: {result}")
-
 # メイン関数
 def main() -> None:
     tracker = HandFaceTracker(
@@ -142,10 +132,16 @@ def main() -> None:
             gesture_result = hand.gesture
             if janken_pose(gesture_result) and not janken_in_progress:
                 janken_in_progress = True
-                janken_thread = threading.Thread(target=start_janken, args=(gesture_result,))
+                akari_hand = random.choice(["グー", "チョキ", "パー"])
+                janken_thread = threading.Thread(target=display_count, args=(akari_hand,))
                 janken_thread.start()
-                janken_thread.join()  # じゃんけんが完了するまで次の処理を待つ
-                janken_in_progress = False
+                player_hand = recognize_gesture(gesture_result)
+                if player_hand:
+                    result = judge(player_hand, akari_hand)
+                    display_result(f"あなたの手: {player_hand}, Akariの手: {akari_hand}, 結果: {result}")
+
+                if not janken_thread.is_alive():
+                    janken_in_progress = False
         
         if renderer.waitKey(delay=1) == ord('q'):
             break
