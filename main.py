@@ -27,11 +27,31 @@ def janken_pose(gesture_result):
     return gesture_result == "OK"
 
 # じゃんけんの結果を表示する
-def display_result(result):
+def display_result(player_hand, akari_hand, result):
     m5.set_display_text(
-        text=result,
+        text=f"あなたの手: {player_hand}",
         pos_x=Positions.CENTER,
-        pos_y=Positions.CENTER,
+        pos_y=30,
+        size=2,
+        text_color=Colors.RED,
+        back_color=Colors.WHITE,
+        refresh=False,
+    )
+    
+    m5.set_display_text(
+        text=f"Akariの手: {akari_hand}",
+        pos_x=Positions.CENTER,
+        pos_y=90,
+        size=2,
+        text_color=Colors.RED,
+        back_color=Colors.WHITE,
+        refresh=False,
+    )
+    
+    m5.set_display_text(
+        text=f"結果: {result}",
+        pos_x=Positions.CENTER,
+        pos_y=150,
         size=2,
         text_color=Colors.RED,
         back_color=Colors.WHITE,
@@ -144,7 +164,7 @@ def main() -> None:
             player_hand = recognize_gesture(gesture_result)
             if player_hand:
                 result = judge(player_hand, akari_hand)
-                display_result(f"あなたの手: {player_hand}, Akariの手: {akari_hand}, 結果: {result}")
+                display_result(player_hand, akari_hand, result)
             janken_in_progress = False  # ゲームを終了
 
         if renderer.waitKey(delay=1) == ord('q'):
