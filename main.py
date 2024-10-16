@@ -1,4 +1,3 @@
-# あいこがまだできていない状態
 import grpc
 import threading
 import sys
@@ -58,18 +57,9 @@ def display_result(player_hand, akari_hand, result):
         back_color=Colors.WHITE,
         refresh=True,
     )
-
-    if result == "勝ち":
-        joints = akari.joints
-        joints.enable_all_servo()
-        joints.set_joint_velocities(pan = 2, tilt = 2)
-        joints.move_joint_positions(pan = 0.0, tilt = -0.5)
-        time.sleep(3)
-        joints.move_joint_positions(pan = 0.0, tilt = 0.0)
-
+    
 # カウントダウンを表示
 def display_count(akari_hand, result_queue):
-
     for i in range(3, 0, -1):
         m5.set_display_text(
             text=f"じゃんけんスタートまで{i}秒",
@@ -113,12 +103,25 @@ def display_count(akari_hand, result_queue):
         back_color=Colors.WHITE,
         refresh=True,
     )
+
+    result_queue.put(akari_hand)  # Akariの手をキューに追加
+
+# あいこまでのカウント
+def draw_count():
+
+    m5.set_display_text(
+        text="あいこ しょっ {akari_hand}",
+        pos_x=Positions.CENTER,
+        pos_y=Positions.CENTER,
+        size=2,
+        text_color=Colors.RED,
+        back_color=Colors.WHITE,
+        refresh=True,
+    )
     time.sleep(1)
 
-    # カウントダウンが終わったタイミングでAkariの手をキューに追加
-    result_queue.put(akari_hand)  
+    result_queue.put(akari_hand)
 
-# 手の判定
 def recognize_gesture(gesture_result):
     if gesture_result == "FIST":  # グー
         return "グー"
@@ -128,9 +131,9 @@ def recognize_gesture(gesture_result):
         return "パー"
     return None
 
-# じゃんけんの結果を判定
 def judge(player_hand, akari_hand):
     if player_hand == akari_hand:
+        draw_count()
         return "引き分け"
     elif (player_hand == "グー" and akari_hand == "チョキ") or \
          (player_hand == "チョキ" and akari_hand == "パー") or \
@@ -138,29 +141,6 @@ def judge(player_hand, akari_hand):
         return "勝ち"
     else:
         return "負け"
-
-# 手のジェスチャーを処理して，じゃんけんの進行状況を制御
-def process_hand_gesture(hands, janken_progress, result_queue):
-    for hand in hands:
-        gesture_result = hand.gesture
-        if janken_pose(gesture_result) and not janken_progress:
-            janken_progress = True
-            akari_hand = random.choice(["グー", "チョキ", "パー"])
-            # display_countを非同期で実行（重くならないように）
-            janken_thread = threading.Thread(target=display_count, args=(akari_hand, result_queue))
-            janken_thread.start()
-    return janken_progress, gesture_result
-
-# akariの手をキューから取り出して，じゃんけんの結果を判定し表示する
-def process_display_result(result_queue, gesture_result, janken_progress):
-    if not result_queue.empty():
-        akari_hand = result_queue.get()
-        player_hand = recognize_gesture(gesture_result)
-        if player_hand:
-            result = judge(player_hand, akari_hand)
-            display_result(player_hand, akari_hand, result)
-        janken_progress = False  # ゲームを終了
-    return janken_progress
 
 # メイン関数
 def main() -> None:
@@ -177,7 +157,7 @@ def main() -> None:
     
     renderer = HandFaceRenderer(tracker=tracker, output=None)
 
-    janken_progress = False
+    janken_in_progress = False
     result_queue = queue.Queue()
 
     while True:
@@ -186,12 +166,31 @@ def main() -> None:
             break
 
         frame = renderer.draw(frame, faces, hands)
-        
-        # 手のジェスチャー処理，カウントダウン
-        janken_progress, gesture_result = process_hand_gesture(hands, janken_progress, result_queue)
 
-        # カウントダウンが終了したらじゃんけんを判定し結果を表示
-        janken_progress = process_display_result(result_queue, gesture_result, janken_progress)
+        # akari 手の選択　display_count 
+        for hand in hands:
+            gesture_result = hand.gesture
+            if janken_pose(gesture_result) and not janken_in_progress:
+                janken_in_progress = True
+                akari_hand = random.choice(["グー", "チョキ", "パー"])
+                janken_thread = threading.Thread(target=display_count, args=(akari_hand, result_queue))
+                janken_thread.start()
+        
+        # カウントダウンが終了したら結果を表示
+        if not result_queue.empty():
+            akari_hand = result_queue.get()
+            player_hand = recognize_gesture(gesture_result)
+            result = judge(player_hand, akari_hand)
+            display_result(player_hand, akari_hand, result)
+
+            while result == "引き分け":
+                draw_count()
+                akari_hand = random.choice(["グー", "チョキ", "パー"])
+                player_hand = recognize_gesture(gesture_result)
+                result = judge(player_hand, akari_hand)
+                display_result(player_hand, akari_hand, result)
+            
+            janken_in_progress = False  # ゲームを終了
 
         if renderer.waitKey(delay=1) == ord('q'):
             break
